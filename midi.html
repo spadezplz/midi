@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MIDI Input Test</title>
+</head>
+<body>
+  <h1>MIDI Input Test</h1>
+
+  <label for="devices">Select MIDI Device:</label>
+  <select id="devices"></select>
+
+  <script>
+    // Check if the Web MIDI API is supported
+    if (navigator.requestMIDIAccess) {
+      // Request access to MIDI devices
+      navigator.requestMIDIAccess()
+        .then(onMIDISuccess, onMIDIFailure);
+    } else {
+      alert('Web MIDI API is not supported in this browser.');
+    }
+
+    // Success callback for accessing MIDI devices
+    function onMIDISuccess(midiAccess) {
+      // Get the list of available MIDI devices
+      var inputs = midiAccess.inputs;
+
+      // Populate the dropdown menu with MIDI device names
+      var devicesDropdown = document.getElementById('devices');
+      inputs.forEach(function(device) {
+        var option = document.createElement('option');
+        option.text = device.name;
+        devicesDropdown.add(option);
+      });
+
+      // Add an event listener to the first MIDI input device
+      var input = inputs.values().next().value;
+      input.onmidimessage = onMIDIMessage;
+    }
+
+    // Failure callback for accessing MIDI devices
+    function onMIDIFailure(error) {
+      alert('Failed to access MIDI devices: ' + error);
+    }
+
+    // MIDI message handler
+    var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    var sources = new Map();
+
+    function onMIDIMessage(message) {
+      // Check if the message is a Note On event (status byte: 0x90)
+      if (message.data[0] === 144) {
+        // Play a sound corresponding to the MIDI key
+        var key = message.data[1];
+        playSound(key);
+      } else if (message.data[0] === 128) {
+        // Stop the sound when releasing the MIDI key
+        var key = message.data[1];
+        stopSound(key);
+      }
+    }
+
+    // Function to play a sound based on the MIDI key
+    function playSound(key) {
+      // Stop the sound if it's already playing
+      stopSound(key);
+
+      // Create a new audio source
+      var source = audioContext.createBufferSource();
+
+      // Set the buffer (audio file) for the source
+      getSoundBuffer(function(buffer) {
+        source.buffer = buffer;
+
+        // Set the playback rate based on the MIDI key
+        source.playbackRate.value = getPlaybackRate(key);
+
+        // Connect the source to the audio context destination
+        source.connect(audioContext.destination);
+
+        // Start the source
+        source.start();
+
+        // Store the source in the map for later reference
+        sources.set(key, source);
+      });
+    }
+
+    // Function to stop the sound for a MIDI key
+    function stopSound(key) {
+      if (sources.has(key)) {
+        var source = sources.get(key);
+        source.stop();
+        sources.delete(key);
+      }
+    }
+
+    // Function to get the audio buffer (file)
+    function getSoundBuffer(callback) {
+      // Load the sound file using XMLHttpRequest
+      var request = new XMLHttpRequest();
+      request.open('GET', 'sound.mp3', true);
+      request.responseType = 'arraybuffer';
+
+      request.onload = function() {
+        audioContext.decodeAudioData(request.response, function(decodedBuffer) {
+          callback(decodedBuffer);
+        });
+      };
+
+      request.send();
+    }
+
+    // Function to calculate the playback rate based on the MIDI key
+    function getPlaybackRate(key) {
+      // Calculate the pitch shift based on the MIDI key (C4 as the reference note)
+      var referenceKey = 60;  // MIDI key for C4
+      var semitoneDifference = key - referenceKey;
+      var pitchShift = Math.pow(2, semitoneDifference / 12);
+
+      return pitchShift;
+    }
+  </script>
+</body>
+</html>
