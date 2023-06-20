@@ -71,7 +71,7 @@
       getSoundBuffer(function(buffer) {
         source.buffer = buffer;
 
-        // Set the playback rate based on the MIDI key with a fixed pitch shift of -3 semitones
+        // Set the playback rate based on the MIDI key with pitch adjustments
         source.playbackRate.value = getPlaybackRate(key);
 
         // Set the loop property to true
@@ -113,12 +113,18 @@
       request.send();
     }
 
-    // Function to calculate the playback rate based on the MIDI key with a fixed pitch shift of -3 semitones
+    // Function to calculate the playback rate based on the MIDI key with pitch adjustments
     function getPlaybackRate(key) {
-      // Calculate the pitch shift based on the MIDI key (C4 as the reference note) with a fixed shift of -3 semitones
+      // Calculate the pitch shift based on the MIDI key (C4 as the reference note) with pitch adjustments
       var referenceKey = 60;  // MIDI key for C4
       var semitoneDifference = key - referenceKey;
-      var pitchShift = Math.pow(2, (semitoneDifference - 3) / 12);
+
+      // Adjust the pitch for the F key to match the B pitch
+      if (semitoneDifference === 5) {
+        semitoneDifference += 6;
+      }
+
+      var pitchShift = Math.pow(2, semitoneDifference / 12);
 
       return pitchShift;
     }
