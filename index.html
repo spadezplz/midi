@@ -74,6 +74,9 @@
         // Set the playback rate based on the MIDI key
         source.playbackRate.value = getPlaybackRate(key);
 
+        // Set the loop property to true
+        source.loop = true;
+
         // Connect the source to the audio context destination
         source.connect(audioContext.destination);
 
